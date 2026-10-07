@@ -5,6 +5,8 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#elif defined(__APPLE__) && defined(PT_IOS)
+#include <unistd.h>
 #else
 #include <fcntl.h>
 #include <signal.h>
@@ -89,6 +91,23 @@ FileLock::FileLock(const std::filesystem::path& path) {
 FileLock::~FileLock() {
     if (held_) CloseHandle(reinterpret_cast<HANDLE>(handle_));
 }
+
+#elif defined(__APPLE__) && defined(PT_IOS)
+
+FILE* OpenFile(const std::filesystem::path& path, const char* mode) { return std::fopen(path.c_str(), mode); }
+int SeekFile(FILE* file, int64_t offset, int origin) { return fseeko(file, static_cast<off_t>(offset), origin); }
+std::string GetEnv(const char* name) {
+    const char* value = std::getenv(name);
+    return value ? value : "";
+}
+uint32_t ProcessId() { return static_cast<uint32_t>(getpid()); }
+ProcessResult RunProcess(const std::filesystem::path&, const std::vector<std::string>&, const std::filesystem::path&,
+                         const std::filesystem::path&, const std::atomic<bool>&, std::chrono::milliseconds) {
+    // iOS does not permit arbitrary child processes. Desktop helper processes are disabled.
+    return {};
+}
+FileLock::FileLock(const std::filesystem::path&) {}
+FileLock::~FileLock() = default;
 
 #else
 
