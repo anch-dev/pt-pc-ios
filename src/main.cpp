@@ -729,6 +729,16 @@ std::filesystem::path FindGameDir(const Options& options) {
         }
         dir = dir.parent_path();
     }
+#if defined(PT_IOS)
+    // iOS has no meaningful current working directory. Prefer a user-visible Documents location
+    // so the extracted CUSA01127 folder can be copied in through the Files app.
+    if (const char* documents = SDL_GetUserFolder(SDL_FOLDER_DOCUMENTS)) {
+        const std::filesystem::path ios_documents(reinterpret_cast<const char8_t*>(documents));
+        for (const auto& candidate : {ios_documents / "CUSA01127", ios_documents / "game" / "CUSA01127"}) {
+            if (LooksLikeGameDir(candidate)) return candidate;
+        }
+    }
+#endif
     const std::filesystem::path remembered_file = RememberedGameDirFile();
     if (!remembered_file.empty()) {
         std::ifstream in(remembered_file, std::ios::binary);
