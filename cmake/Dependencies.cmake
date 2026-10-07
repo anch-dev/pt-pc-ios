@@ -5,6 +5,20 @@ set(FETCHCONTENT_QUIET ON)
 find_package(Vulkan REQUIRED COMPONENTS glslc)
 find_package(Threads REQUIRED)
 
+if(PT_IOS)
+  # The iOS Vulkan path is MoltenVK over Metal. Prefer the static XCFramework slice so the
+  # final IPA has no separately embedded dynamic Vulkan loader.
+  find_library(PT_MOLTENVK_LIBRARY
+    NAMES MoltenVK libMoltenVK
+    PATHS
+      "$ENV{VULKAN_SDK}/iOS/lib/MoltenVK.xcframework/ios-arm64"
+      "$ENV{VULKAN_SDK}/iOS/lib"
+    NO_DEFAULT_PATH)
+  if(NOT PT_MOLTENVK_LIBRARY)
+    message(FATAL_ERROR "PT_IOS requires the iOS MoltenVK library. Set VULKAN_SDK to a Vulkan SDK with iOS development libraries installed.")
+  endif()
+endif()
+
 set(SDL_SHARED OFF CACHE BOOL "" FORCE)
 set(SDL_STATIC ON CACHE BOOL "" FORCE)
 set(SDL_TEST_LIBRARY OFF CACHE BOOL "" FORCE)
@@ -189,6 +203,9 @@ if(WIN32)
   target_compile_definitions(pt_thirdparty PUBLIC VK_USE_PLATFORM_WIN32_KHR)
 endif()
 target_link_libraries(pt_thirdparty PUBLIC Vulkan::Headers SDL3::SDL3-static zlibstatic pt_bc7enc)
+if(PT_IOS)
+  target_link_libraries(pt_thirdparty PUBLIC ${PT_MOLTENVK_LIBRARY} "-framework Metal" "-framework Foundation" "-framework QuartzCore" "-framework UIKit" "-framework IOSurface")
+endif()
 if(NOT WIN32 AND NOT PT_IOS)
   # Unicode text shaping for the added languages (src/engine/ui/unicode_font_harfbuzz.cpp); Windows uses Uniscribe instead
   FetchContent_Declare(harfbuzz GIT_REPOSITORY https://github.com/harfbuzz/harfbuzz.git GIT_TAG 14.6.0 GIT_SHALLOW TRUE)
