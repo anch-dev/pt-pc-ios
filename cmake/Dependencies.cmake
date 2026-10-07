@@ -11,8 +11,10 @@ if(PT_IOS)
   find_library(PT_MOLTENVK_LIBRARY
     NAMES MoltenVK libMoltenVK
     PATHS
-      "$ENV{VULKAN_SDK}/iOS/lib/MoltenVK.xcframework/ios-arm64"
-      "$ENV{VULKAN_SDK}/iOS/lib"
+      "$ENV{VULKAN_SDK_IOS}/lib/MoltenVK.xcframework/ios-arm64"
+      "$ENV{VULKAN_SDK_IOS}/lib"
+      "$ENV{VULKAN_SDK}/../iOS/lib/MoltenVK.xcframework/ios-arm64"
+      "$ENV{VULKAN_SDK}/../iOS/lib"
     NO_DEFAULT_PATH)
   if(NOT PT_MOLTENVK_LIBRARY)
     message(FATAL_ERROR "PT_IOS requires the iOS MoltenVK library. Set VULKAN_SDK to a Vulkan SDK with iOS development libraries installed.")
