@@ -74,6 +74,15 @@ bool Context::Init(SDL_Window* window, bool validation) {
     if (loader) {
         /* With Streamline loaded, instance, device and swapchain must come from its proxies, so volk takes the interposer's loader instead of vulkan-1.dll. */
         volkInitializeCustom(loader);
+    } else if (PT_IOS) {
+        // SDL3 knows how to locate the statically linked MoltenVK image on Apple platforms.
+        if (!Check(SDL_Vulkan_LoadLibrary(nullptr), "SDL_Vulkan_LoadLibrary")) {
+            return false;
+        }
+        auto proc = reinterpret_cast<PFN_vkGetInstanceProcAddr>(SDL_Vulkan_GetVkGetInstanceProcAddr());
+        if (!proc || !Check(volkInitializeCustom(proc), "volkInitializeCustom(MoltenVK)")) {
+            return false;
+        }
     } else if (!Check(volkInitialize(), "volkInitialize")) {
         return false;
     }
@@ -213,7 +222,7 @@ bool Context::Init(SDL_Window* window, bool validation) {
     VkPhysicalDeviceFeatures2 features{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
     features.pNext = &features12;
     features.features.samplerAnisotropy = VK_TRUE;
-    features.features.textureCompressionBC = VK_TRUE;
+    features.features.textureCompressionBC = PT_IOS ? VK_FALSE : VK_TRUE;
     features.features.fillModeNonSolid = VK_TRUE;
     features.features.shaderInt16 = VK_TRUE;
     features.features.shaderClipDistance = VK_TRUE;
