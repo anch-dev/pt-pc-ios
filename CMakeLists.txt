@@ -1,6 +1,19 @@
 cmake_minimum_required(VERSION 3.28)
 project(pt_port LANGUAGES C CXX)
 
+option(PT_IOS "Build the native iOS target" OFF)
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+  set(PT_IOS ON CACHE BOOL "Build the native iOS target" FORCE)
+endif()
+
+if(PT_IOS)
+  if(NOT CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    message(FATAL_ERROR "PT_IOS requires CMAKE_SYSTEM_NAME=iOS")
+  endif()
+  set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "" FORCE)
+  set(CMAKE_OSX_DEPLOYMENT_TARGET "16.0" CACHE STRING "" FORCE)
+endif()
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 11)
@@ -63,6 +76,10 @@ add_dependencies(pt_engine pt_version)
 target_include_directories(pt_engine PUBLIC src)
 target_compile_definitions(pt_engine PUBLIC VK_NO_PROTOTYPES NOMINMAX WIN32_LEAN_AND_MEAN GLM_FORCE_DEPTH_ZERO_TO_ONE GLM_FORCE_RADIANS)
 target_link_libraries(pt_engine PUBLIC pt_thirdparty SDL3::SDL3-static)
+if(PT_IOS)
+  target_compile_definitions(pt_engine PUBLIC VK_USE_PLATFORM_IOS_MVK)
+  target_link_libraries(pt_engine PUBLIC "-framework Foundation" "-framework UIKit" "-framework GameController" "-framework AVFoundation" "-framework Metal" "-framework QuartzCore")
+endif()
 if(WIN32)
   # dbghelp: the crash report (src/engine/core/crash_report.cpp) writes minidumps from pt_engine, so every test links it
   target_link_libraries(pt_engine PUBLIC gdi32 usp10 winhttp dbghelp ws2_32)
@@ -74,7 +91,20 @@ if(MSVC)
   target_compile_options(pt_engine PRIVATE /W3 /utf-8 /EHsc)
 endif()
 
-add_executable(pt WIN32 src/main.cpp)
+if(PT_IOS)
+  add_executable(pt MACOSX_BUNDLE src/main.cpp)
+  set_target_properties(pt PROPERTIES
+    MACOSX_BUNDLE_GUI_IDENTIFIER "com.anch.pt-pc"
+    MACOSX_BUNDLE_BUNDLE_NAME "P.T. PC Port"
+    MACOSX_BUNDLE_BUNDLE_VERSION "${PT_VERSION}"
+    MACOSX_BUNDLE_SHORT_VERSION_STRING "${PT_VERSION}"
+    XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED "NO"
+    XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "NO"
+    XCODE_ATTRIBUTE_SUPPORTED_PLATFORMS "iphoneos"
+  )
+else()
+  add_executable(pt WIN32 src/main.cpp)
+endif()
 target_link_libraries(pt PRIVATE pt_engine)
 if(WIN32)
   target_link_libraries(pt PRIVATE dbghelp ole32 uuid)
