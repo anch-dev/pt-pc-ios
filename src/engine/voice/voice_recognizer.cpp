@@ -107,6 +107,19 @@ std::string LoadError() {
 std::string LibraryName(const char* name) { return std::string(kLibraryPrefix) + name + kLibraryExtension; }
 
 bool LoadRuntime(const std::filesystem::path& dir) {
+#if defined(__APPLE__) && defined(PT_IOS)
+    // iOS cannot load the desktop .so runtime. whisper.cpp is linked statically into the app.
+    std::lock_guard lock(g_api_mutex);
+    if (g_api.ready) return true;
+#define PT_WHISPER_BIND(name) g_api.name = &::name;
+    PT_WHISPER_FUNCTIONS(PT_WHISPER_BIND)
+#undef PT_WHISPER_BIND
+    g_api.cpu = "ios-arm64";
+    g_api.whisper_log_set(WhisperLog, nullptr);
+    g_api.ready = true;
+    LogInfo("voice: using statically linked whisper.cpp on iOS");
+    return true;
+#else
     std::lock_guard lock(g_api_mutex);
     if (g_api.ready) return true;
     const Library base = LoadNear(dir / LibraryName("ggml-base"));
@@ -159,8 +172,9 @@ bool LoadRuntime(const std::filesystem::path& dir) {
     g_api.ready = true;
     LogInfo("voice: whisper.cpp CPU code ggml-cpu-{} (score {})", g_api.cpu, best_score);
     return true;
-}
 
+#endif
+}
 void WriteSegment(const std::filesystem::path& folder, const std::vector<float>& audio) {
     static std::atomic<int> count{0};
     std::ofstream file(folder / std::format("voice_segment_{:04}.wav", count++), std::ios::binary);
