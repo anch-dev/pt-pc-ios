@@ -210,6 +210,18 @@ endforeach()
 add_custom_target(pt_shaders ALL DEPENDS ${PT_SPIRV_OUTPUTS})
 add_dependencies(pt pt_shaders)
 target_compile_definitions(pt_engine PUBLIC PT_SHADER_DIR="${PT_SPIRV_DIR}" PT_VOICE_MODEL_DIR="${CMAKE_BINARY_DIR}/voice")
+if(PT_IOS)
+  # SDL_GetBasePath() resolves to the iOS bundle Resources directory.
+  add_custom_command(TARGET pt POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:pt>/Resources/shaders"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${PT_SPIRV_DIR}" "$<TARGET_FILE_DIR:pt>/Resources/shaders"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:pt>/Resources/fonts"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/assets/fonts" "$<TARGET_FILE_DIR:pt>/Resources/fonts"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:pt>/Resources/voice"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${PT_VOICE_DIR}" "$<TARGET_FILE_DIR:pt>/Resources/voice"
+    VERBATIM)
+  set_target_properties(pt PROPERTIES RESOURCE "${CMAKE_BINARY_DIR}/generated/pt_version.h")
+endif()
 target_include_directories(pt_engine PRIVATE ${PT_WHISPER_INCLUDE_DIRS})
 # whisper.cpp, ggml and its CPU variants in voice/ for every game target (tools/package.py ships them with any of these)
 if(PT_IOS)
