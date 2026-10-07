@@ -84,6 +84,34 @@
 
 namespace {
 
+#if defined(PT_IOS)
+void DrawIosTouchOverlay() {
+    ImGuiIO& io = ImGui::GetIO();
+    if (io.DisplaySize.x <= 0.0f || io.DisplaySize.y <= 0.0f) return;
+    ImDrawList* draw = ImGui::GetForegroundDrawList();
+    const float w = io.DisplaySize.x;
+    const float h = io.DisplaySize.y;
+    const float scale = std::min(w, h) / 900.0f;
+    const ImVec2 left_center(w * 0.18f, h * 0.72f);
+    const float stick = 72.0f * scale;
+    const float button = 42.0f * scale;
+    auto circle = [&](ImVec2 p, float r, const char* label) {
+        draw->AddCircleFilled(p, r, IM_COL32(20, 20, 20, 72), 32);
+        draw->AddCircle(p, r, IM_COL32(255, 255, 255, 110), 32, 2.0f);
+        if (label) {
+            const ImVec2 size = ImGui::CalcTextSize(label);
+            draw->AddText(ImVec2(p.x - size.x * 0.5f, p.y - size.y * 0.5f), IM_COL32(255, 255, 255, 190), label);
+        }
+    };
+    draw->AddCircleFilled(left_center, stick, IM_COL32(20, 20, 20, 48), 40);
+    draw->AddCircle(left_center, stick, IM_COL32(255, 255, 255, 90), 40, 2.0f);
+    circle(ImVec2(w * 0.82f, h * 0.72f), button, "A");
+    circle(ImVec2(w * 0.70f, h * 0.79f), button, "B");
+    circle(ImVec2(w * 0.90f, h * 0.84f), button * 0.82f, "MENU");
+    draw->AddText(ImVec2(w * 0.54f, h * 0.90f), IM_COL32(255, 255, 255, 80), "drag right side to look");
+}
+#endif
+
 #ifdef PT_RELEASE_LOCKS
 constexpr bool kReleaseLocks = true;
 #else
@@ -3911,6 +3939,11 @@ int RunGame(App& app, pt::Vfs& vfs) {
             if (show_settings) {
                 DrawSettingsWindow(app, input, sound, game);
             }
+#if defined(PT_IOS)
+            if (!show_settings && !show_debug && !photo_mode && !game.Paused()) {
+                DrawIosTouchOverlay();
+            }
+#endif
             ImGui::Render();
         }
         if (photo_mode) {
