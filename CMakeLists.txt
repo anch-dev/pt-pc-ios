@@ -78,6 +78,7 @@ target_compile_definitions(pt_engine PUBLIC VK_NO_PROTOTYPES NOMINMAX WIN32_LEAN
 target_link_libraries(pt_engine PUBLIC pt_thirdparty SDL3::SDL3-static)
 if(PT_IOS)
   target_compile_definitions(pt_engine PUBLIC VK_USE_PLATFORM_IOS_MVK)
+  target_link_libraries(pt_engine PUBLIC whisper)
   target_link_libraries(pt_engine PUBLIC "-framework Foundation" "-framework UIKit" "-framework GameController" "-framework AVFoundation" "-framework Metal" "-framework QuartzCore")
 endif()
 if(WIN32)
