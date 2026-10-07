@@ -1,0 +1,70 @@
+name: iOS ARM64 IPA
+on:
+  workflow_dispatch:
+  push:
+    branches: [ios-port]
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    timeout-minutes: 90
+    env:
+      VULKAN_VERSION: 1.4.363.0
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Vulkan SDK with iOS support
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL "https://sdk.lunarg.com/sdk/download/\${VULKAN_VERSION}/mac/vulkansdk-macos-\${VULKAN_VERSION}.zip" -o vulkan-sdk.zip
+          unzip -q vulkan-sdk.zip
+          sudo "vulkansdk-macOS-\${VULKAN_VERSION}.app/Contents/MacOS/vulkansdk-macOS-\${VULKAN_VERSION}" \\
+            --root "$HOME/VulkanSDK/\${VULKAN_VERSION}" \\
+            --accept-licenses --default-answer --confirm-command install \\
+            com.lunarg.vulkan.core com.lunarg.vulkan.ios
+          echo "VULKAN_SDK=$HOME/VulkanSDK/\${VULKAN_VERSION}/macOS" >> "$GITHUB_ENV"
+          echo "VULKAN_SDK_IOS=$HOME/VulkanSDK/\${VULKAN_VERSION}/iOS" >> "$GITHUB_ENV"
+          echo "$HOME/VulkanSDK/\${VULKAN_VERSION}/macOS/bin" >> "$GITHUB_PATH"
+
+      - name: Configure
+        run: |
+          cmake -S . -B build-ios -G Xcode \\
+            -DCMAKE_TOOLCHAIN_FILE=cmake/iOS.cmake \\
+            -DCMAKE_SYSTEM_NAME=iOS \\
+            -DCMAKE_OSX_SYSROOT=iphoneos \\
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \\
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=16.0 \\
+            -DPT_IOS=ON \\
+            -DPT_GAMEPLUS=ON
+
+      - name: Build unsigned app
+        run: |
+          cmake --build build-ios --config Release --target pt -- \\
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+
+      - name: Package unsigned IPA
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP="build-ios/Release-iphoneos/pt.app"
+          test -d "$APP"
+          rm -rf Payload pt-ios-unsigned.ipa
+          mkdir Payload
+          cp -R "$APP" Payload/pt.app
+          /usr/bin/zip -qry pt-ios-unsigned.ipa Payload
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: pt-ios-unsigned
+          path: pt-ios-unsigned.ipa
+          if-no-files-found: error
+
+      - name: Upload app for debugging
+        uses: actions/upload-artifact@v4
+        with:
+          name: pt-ios-app
+          path: build-ios/Release-iphoneos/pt.app
+          if-no-files-found: error
