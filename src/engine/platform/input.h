@@ -168,6 +168,7 @@ private:
     uint32_t TouchRaw(const Pad& pad) const;
     glm::vec2 Stick(const Pad& pad, int x_axis, int y_axis) const;
     void UpdateRumble();
+    void UpdateTouch(const SDL_Event& event);
 
     std::vector<Pad> pads_;
     uint64_t use_counter_ = 0;
@@ -187,6 +188,16 @@ private:
     bool last_from_gamepad_ = false;
     std::vector<bool> injected_keys_;
     uint32_t injected_mouse_ = 0;
+    struct TouchPoint {
+        uint64_t id = 0;
+        float x = 0.0f;
+        float y = 0.0f;
+        bool active = false;
+    };
+    std::array<TouchPoint, 16> touches_{};
+    glm::vec2 touch_left_{0.0f};
+    glm::vec2 touch_look_{0.0f};
+    uint32_t touch_raw_ = 0;
     PromptStyle prompts_;
     uint32_t prompt_pad_ = 0;
     float mouse_travel_ = 0.0f;
