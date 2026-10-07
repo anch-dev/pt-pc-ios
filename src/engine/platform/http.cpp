@@ -118,6 +118,8 @@ std::optional<Response> Get(const Request&) {
     return std::nullopt;
 }
 
+#else
+
 namespace {
 using CURL = void;
 struct curl_slist;
