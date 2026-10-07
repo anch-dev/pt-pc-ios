@@ -110,7 +110,13 @@ std::optional<Response> Get(const Request& request) {
     return response;
 }
 
-#else
+#elif defined(__APPLE__) && defined(PT_IOS)
+
+std::optional<Response> Get(const Request&) {
+    // iOS builds do not use the desktop libcurl loader. Update checks are disabled until
+    // they are backed by NSURLSession/CFNetwork or an app-native networking layer.
+    return std::nullopt;
+}
 
 namespace {
 using CURL = void;
